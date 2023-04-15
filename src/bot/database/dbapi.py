@@ -57,6 +57,15 @@ class DatabaseConnector:
             """, (id,))
             result = cur.fetchone()
             return result if result else None
+    def get_book_borrows(self, book_id):
+        conn = self.connect()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT borrow_id, book_id, date_start, date_end FROM "Borrows"
+                WHERE book_id = %s;
+            """, (book_id,))
+            result = cur.fetchall()
+            return result if result else None
     def get_book(self, title, author):
         conn = self.connect()
         with conn.cursor() as cur:
@@ -137,6 +146,7 @@ class DatabaseConnector:
 
 
 
-#dc = DatabaseConnector("localhost", "postgres", "postgres", "171278")
+# dc = DatabaseConnector("localhost", "postgres", "postgres", "postgres")
+# print(dc.get_book_borrows(1))
 # # b = Book(title='T okdgllgdlgdRings', author='Jliyhokien', published=1954, date_added='2023-04-14', date_deleted=None)
 #print(dc.get_book("в","Ы"))

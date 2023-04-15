@@ -1,39 +1,35 @@
-from flask import Flask, send_file
+import datetime
+
+from flask import Flask, request, send_file
 import pandas as pd
-from dbapi import DatabaseConnector
+import tempfile
+# from database.dbapi import DatabaseConnector
 
 app = Flask(__name__)
-
-# Папка, в которой будут временно храниться файлы со статистикой
-DOWNLOAD_FOLDER = '/path/to/download/folder'
-app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
 
 
 @app.route('/download/<int:book_id>')
 def download_stats(book_id):
-    # Получаем данные о заимах книги из БД
-    db = DatabaseConnector()
-    borrows = db.get_book_borrows(book_id)
+    # Get borrows for given book_id
+    # db = DatabaseConnector("localhost", "postgres", "postgres", "postgres")
+    # borrows = db.get_book_borrows(book_id)
+    # print(borrows)
+    borrows = [(1, 1, datetime.datetime(2023, 4, 15, 11, 58, 22, 27270), datetime.datetime(2023, 4, 15, 0, 0)),
+     (3, 1, datetime.datetime(2023, 4, 15, 12, 1, 8, 322826), None)]
+    # Drop user_id from borrows dataframe
+    # borrows = borrows.drop('user_id', axis=1)
 
-    if not borrows:
-        return 'Статистика использования книги не найдена'
+    # Create temporary file to save the statistics
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_file:
+        # Write the statistics to the temporary file using pandas
+        borrows.to_excel(tmp_file.name, index=False)
 
-    # Создаем DataFrame из полученных данных
-    df = pd.DataFrame(borrows, columns=['borrow_id', 'book_id', 'user_id', 'date_start', 'date_end'])
-
-    # Удаляем колонку user_id, чтобы не передавать личные данные пользователя
-    df.drop(columns=['user_id'], inplace=True)
-
-    # Генерируем имя файла для сохранения
-    filename = f'stats_book_{book_id}.xlsx'
-    filepath = f'{DOWNLOAD_FOLDER}/{filename}'
-
-    # Сохраняем DataFrame в эксель-файле
-    df.to_excel(filepath, index=False)
-
-    # Отправляем файл пользователю
-    return send_file(filepath, attachment_filename=filename, as_attachment=True)
+    # Return the temporary file to the user as a downloadable file
+    return send_file(tmp_file.name, as_attachment=True, attachment_filename='book_stats.xlsx')
 
 
 if __name__ == '__main__':
     app.run()
+    # db = DatabaseConnector("localhost", "postgres", "postgres", "postgres")
+    # borrows = db.get_book_borrows(1)
+    # print(borrows)
