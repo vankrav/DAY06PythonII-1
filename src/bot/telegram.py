@@ -145,11 +145,13 @@ def borrow_book_find(message, book_title, book_author):
             bot.send_message(message.chat.id, "Да/Нет")
         else:
             bot.send_message(message.chat.id, f"Книга не найдена")
+        bot.register_next_step_handler(message, borrow_book_from_database, book_title, book_author, book_id)
     except ValueError:
         bot.send_message(message.chat.id, "Некорректный ввод года издания")
     except:
         bot.send_message(message.chat.id, "Ошибка при поиске книги")
-    bot.register_next_step_handler(message, borrow_book_from_database, book_title, book_author, book_id)
+
+
 def borrow_book_from_database(message, book_title, book_author, book_id):
        if message.text.lower() == "да":
           if db.borrow(book_id, message.chat.id):
@@ -162,8 +164,10 @@ def retrieve_book(message):
     borrow_id = db.get_borrow(message.chat.id)
     book_id = db.retrieve(borrow_id, date.today())
     result = db.get_book_by_id(book_id)
-
-    bot.send_message(message.chat.id, f"Вы вернули книгу {result[0]} {result[1]} {result[2]}")
+    try:
+        bot.send_message(message.chat.id, f"Вы вернули книгу {result[0]} {result[1]} {result[2]}")
+    except:
+        bot.send_message(message.chat.id, f"Вам нечего возвращать")
 
 @bot.message_handler(commands=['list'])
 def list(message):
@@ -174,6 +178,33 @@ def list(message):
 
     bot.send_message(message.chat.id, s)
 
-
+@bot.message_handler(commands=['stats'])
+def stats_book(message):
+    # Запрос на ввод названия книги
+    bot.send_message(message.chat.id, "Введите название книги:")
+    bot.register_next_step_handler(message, stats_book_author)
+def stats_book_author(message):
+    # Сохраняем название книги в переменную и запрашиваем автора
+    book_title = message.text
+    bot.send_message(message.chat.id, "Введите автора:")
+    bot.register_next_step_handler(message, stats_book_year, book_title)
+def stats_book_year(message, book_title):
+    # Сохраняем автора в переменную и запрашиваем год издания
+    book_author = message.text
+    bot.send_message(message.chat.id, "Введите год издания:")
+    bot.register_next_step_handler(message,stats_book_result, book_title, book_author)
+def stats_book_result(message, book_title, book_author):
+    try:
+        book_year = int(message.text)
+        print(book_title, book_author)
+        book_id = db.get_book(book_title, book_author)
+        if book_id:
+            bot.send_message(message.chat.id, f"Статистика доступна по адресу http://127.0.0.1:5000/download/{book_id}")
+        else:
+            bot.send_message(message.chat.id, f"Такой книги у нас нет")
+    except ValueError:
+        bot.send_message(message.chat.id, "Некорректный ввод года издания")
+    except:
+        bot.send_message(message.chat.id, "Ошибка при поиске книги")
 
 bot.polling()
